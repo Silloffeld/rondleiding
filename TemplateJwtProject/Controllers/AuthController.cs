@@ -58,10 +58,10 @@ public class AuthController : ControllerBase
             return BadRequest(ModelState);
         }
 
-        // Wijs standaard de "User" rol toe
-        await _userManager.AddToRoleAsync(user, Roles.User);
+        // Wijs standaard de "Admin" rol toe
+        await _userManager.AddToRoleAsync(user, Roles.Admin);
 
-        _logger.LogInformation("User {Email} created successfully with role {Role}", model.Email, Roles.User);
+        _logger.LogInformation("User {Email} created successfully with role {Role}", model.Email, Roles.Admin);
 
         var token = await _jwtService.GenerateTokenAsync(user);
         var refreshToken = await _refreshTokenService.GenerateRefreshTokenAsync(user.Id);

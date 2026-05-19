@@ -30,8 +30,7 @@ using (var scope = app.Services.CreateScope())
         if (result.Succeeded)
         {
             await userManager.AddToRoleAsync(adminUser, Roles.Admin);
-            await userManager.AddToRoleAsync(adminUser, Roles.User);
-            Console.WriteLine($"? Admin user created: {adminEmail}");
+            Console.WriteLine($"? Admin account created: {adminEmail}");
         }
     }
 }
@@ -43,7 +42,7 @@ using (var scope = app.Services.CreateScope())
 
 ## Methode 2: Via API Calls
 
-### Stap 1: Registreer een nieuwe gebruiker
+### Stap 1: Registreer een nieuwe admin
 ```bash
 POST /api/auth/register
 {
@@ -60,7 +59,7 @@ Voer dit SQL script uit in SQL Server Management Studio:
 ```sql
 USE MyProject;
 
--- Vind User ID
+-- Vind Account ID
 DECLARE @UserId NVARCHAR(450);
 SELECT @UserId = Id FROM AspNetUsers WHERE Email = 'admin@example.com';
 
@@ -118,7 +117,7 @@ protected override void Up(MigrationBuilder migrationBuilder)
 
 ## Verificatie
 
-Test of de admin gebruiker correct is aangemaakt:
+Test of de admin account correct is aangemaakt:
 
 ```bash
 # Login als admin
@@ -132,18 +131,18 @@ curl -X POST https://localhost:7xxx/api/auth/login \
 {
   "token": "eyJhbG...",
   "email": "admin@example.com",
-  "roles": ["User", "Admin"],
+  "roles": ["Admin"],
   "expiresAt": "..."
 }
 ```
 
-Controleer dat de response **beide rollen** bevat: `["User", "Admin"]`
+Controleer dat de response **de Admin rol** bevat: `["Admin"]`
 
 ## Test Admin Endpoints
 
 ```bash
 # Gebruik het token van hierboven
-curl -X GET https://localhost:7xxx/api/admin/users \
+curl -X GET https://localhost:7xxx/api/admin/admins \
   -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
 ```
 
@@ -166,7 +165,7 @@ curl -X GET https://localhost:7xxx/api/admin/users \
   ```sql
   SELECT * FROM AspNetRoles;
   ```
-  Moet bevatten: Admin en User
+  Moet bevatten: Admin
 
 ## Security Note
 

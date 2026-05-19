@@ -2,14 +2,14 @@
 
 ## Wat zijn Refresh Tokens?
 
-Refresh tokens zijn langdurige tokens die gebruikt worden om nieuwe access tokens (JWT) te verkrijgen zonder opnieuw in te loggen. Dit verbetert zowel de beveiliging als de gebruikerservaring.
+Refresh tokens zijn langdurige tokens die gebruikt worden om nieuwe access tokens (JWT) te verkrijgen zonder opnieuw in te loggen. Dit verbetert zowel de beveiliging als de admin-ervaring.
 
 ## Hoe werkt het?
 
-1. **Login/Register**: Gebruiker ontvangt een JWT access token (60 min) + refresh token (7 dagen)
+1. **Login/Register**: Admin ontvangt een JWT access token (60 min) + refresh token (7 dagen)
 2. **Access token verloopt**: Na 60 minuten is de JWT access token verlopen
 3. **Refresh**: Frontend gebruikt de refresh token om een nieuwe access token te krijgen
-4. **Automatisch**: Gebruiker blijft ingelogd zonder opnieuw credentials in te voeren
+4. **Automatisch**: Admin blijft ingelogd zonder opnieuw credentials in te voeren
 
 ## Beveiliging Features
 
@@ -18,7 +18,7 @@ Refresh tokens zijn langdurige tokens die gebruikt worden om nieuwe access token
 ? **Expiratie**: Refresh tokens verlopen na 7 dagen (configureerbaar)
 ? **Revocation**: Tokens kunnen worden ingetrokken
 ? **Single Use**: Elke refresh token kan maar 1x gebruikt worden
-? **Logout All Devices**: Alle refresh tokens van een user kunnen worden ingetrokken
+? **Logout All Devices**: Alle refresh tokens van een admin account kunnen worden ingetrokken
 
 ## API Endpoints
 
@@ -28,7 +28,7 @@ POST /api/auth/login
 Content-Type: application/json
 
 {
-  "email": "user@example.com",
+  "email": "admin@example.com",
   "password": "Test123!"
 }
 ```
@@ -38,8 +38,8 @@ Content-Type: application/json
 {
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "refreshToken": "kYj3L8Xm9QwErTy...",
-  "email": "user@example.com",
-  "roles": ["User"],
+  "email": "admin@example.com",
+  "roles": ["Admin"],
   "expiresAt": "2024-01-17T13:37:08Z"
 }
 ```
@@ -59,8 +59,8 @@ Content-Type: application/json
 {
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",  // Nieuwe access token
   "refreshToken": "p7K2m5N8vRxWqZt...",  // Nieuwe refresh token
-  "email": "user@example.com",
-  "roles": ["User"],
+  "email": "admin@example.com",
+  "roles": ["Admin"],
   "expiresAt": "2024-01-17T14:37:08Z"
 }
 ```
@@ -194,10 +194,10 @@ class AuthService {
 const auth = new AuthService();
 
 // Login
-await auth.login('user@example.com', 'Test123!');
+await auth.login('admin@example.com', 'Test123!');
 
 // API call met automatische token refresh
-const response = await auth.apiRequest('https://localhost:7xxx/api/test/user');
+const response = await auth.apiRequest('https://localhost:7xxx/api/test/admin');
 const data = await response.json();
 ```
 
@@ -341,7 +341,7 @@ In `appsettings.json`:
 
 De `RefreshTokens` tabel slaat op:
 - `Token`: Unique refresh token string
-- `UserId`: Gekoppelde gebruiker
+- `UserId`: Gekoppelde admin account
 - `ExpiresAt`: Expiratie datum
 - `CreatedAt`: Aanmaak datum
 - `RevokedAt`: Intrekking datum (null = actief)
