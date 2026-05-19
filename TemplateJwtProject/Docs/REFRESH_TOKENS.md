@@ -6,10 +6,12 @@ Refresh tokens zijn langdurige tokens die gebruikt worden om nieuwe access token
 
 ## Hoe werkt het?
 
-1. **Login/Register**: Admin ontvangt een JWT access token (60 min) + refresh token (7 dagen)
+1. **Login**: Admin ontvangt een JWT access token (60 min) + refresh token (7 dagen)
 2. **Access token verloopt**: Na 60 minuten is de JWT access token verlopen
 3. **Refresh**: Frontend gebruikt de refresh token om een nieuwe access token te krijgen
 4. **Automatisch**: Admin blijft ingelogd zonder opnieuw credentials in te voeren
+
+Admin accounts worden aangemaakt door bestaande admins of via seeding; bezoekers hebben geen account nodig.
 
 ## Beveiliging Features
 

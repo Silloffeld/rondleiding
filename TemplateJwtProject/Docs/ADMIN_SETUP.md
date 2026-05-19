@@ -40,44 +40,21 @@ using (var scope = app.Services.CreateScope())
 - Email: `admin@example.com`
 - Password: `Admin123!`
 
-## Methode 2: Via API Calls
+## Methode 2: Via API Calls (alleen met bestaande admin token)
+
+Gebruik deze methode om **extra** admins aan te maken nadat er al minstens één admin bestaat.
 
 ### Stap 1: Registreer een nieuwe admin
 ```bash
 POST /api/auth/register
+Authorization: Bearer {admin-token}
 {
   "email": "admin@example.com",
   "password": "Admin123!",
   "confirmPassword": "Admin123!"
 }
 ```
-
-### Stap 2: Voeg Admin rol toe via database
-
-Voer dit SQL script uit in SQL Server Management Studio:
-
-```sql
-USE MyProject;
-
--- Vind Account ID
-DECLARE @UserId NVARCHAR(450);
-SELECT @UserId = Id FROM AspNetUsers WHERE Email = 'admin@example.com';
-
--- Vind Admin Role ID
-DECLARE @AdminRoleId NVARCHAR(450);
-SELECT @AdminRoleId = Id FROM AspNetRoles WHERE Name = 'Admin';
-
--- Voeg Admin rol toe
-INSERT INTO AspNetUserRoles (UserId, RoleId)
-VALUES (@UserId, @AdminRoleId);
-
--- Verificatie
-SELECT u.Email, r.Name as Role
-FROM AspNetUsers u
-JOIN AspNetUserRoles ur ON u.Id = ur.UserId
-JOIN AspNetRoles r ON ur.RoleId = r.Id
-WHERE u.Email = 'admin@example.com';
-```
+Deze endpoint wijst automatisch de Admin rol toe.
 
 ## Methode 3: Via EF Core Migration Data Seeding
 

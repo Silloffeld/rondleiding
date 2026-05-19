@@ -12,7 +12,7 @@ Dit project implementeert een complete ASP.NET Core Web API met Identity, JWT au
 - ✅ **Role-based Authorization (Admin rol)**
 - ✅ **CORS configuratie voor frontend integratie**
 - ✅ SQL Server database met Entity Framework Core
-- ✅ Register & Login endpoints met automatische admin-rol toewijzing
+- ✅ Login endpoint voor admins en admin-only registratie
 - ✅ Admin endpoints voor beheer van admin-accounts
 - ✅ Beveiligde endpoints met `[Authorize]` attribuut
 - ✅ Token revocation & logout from all devices
@@ -41,6 +41,8 @@ Het systeem heeft één standaard rol:
 
 - **Admin** - Beheerdersrol voor toegang tot beveiligde endpoints
 
+Bezoekers gebruiken de website zonder account; alleen admins hebben een account.
+
 Rollen worden automatisch aangemaakt bij het opstarten van de applicatie via `RoleInitializer`.
 
 ## Database Tabellen
@@ -59,7 +61,7 @@ Na het runnen van de migraties zijn de volgende Identity tabellen aangemaakt:
 
 ### URL
 De API draait default op https://localhost:7003
-dus wanneer je een post naar de register endpoint wilt maken om een admin te registeren zou je dat in de 
+dus wanneer je een post naar de admin-only register endpoint wilt maken om een admin te registeren zou je dat in de 
 development omgeving kunnen doen naar:  https://localhost:7003/api/auth/register
 
 
@@ -284,11 +286,12 @@ export default api;
 
 ## API Endpoints
 
-### Auth Controller (Publiek)
+### Auth Controller
 
-#### 1. Register - Nieuwe admin aanmaken
+#### 1. Register - Nieuwe admin aanmaken (Admin-only)
 ```http
 POST /api/auth/register
+Authorization: Bearer {admin-token}
 Content-Type: application/json
 
 {
@@ -309,7 +312,7 @@ Content-Type: application/json
 }
 ```
 
-**Note:** Nieuwe admins krijgen automatisch de "Admin" rol toegewezen.
+**Note:** Alleen bestaande admins kunnen nieuwe admins aanmaken.
 
 #### 2. Login - Inloggen met bestaande admin
 ```http
@@ -416,10 +419,11 @@ Authorization: Bearer {token}
 
 ## Gebruik met Postman/curl
 
-### 1. Register en Login
+### 1. Admin aanmaken (Admin-only) en Login
 ```bash
-# Register (krijgt automatisch Admin rol + refresh token)
+# Register (admin-only, krijgt automatisch Admin rol + refresh token)
 curl -X POST https://localhost:7xxx/api/auth/register \
+  -H "Authorization: Bearer YOUR_ADMIN_JWT_TOKEN_HERE" \
   -H "Content-Type: application/json" \
   -d '{"email":"test@test.com","password":"Test123!","confirmPassword":"Test123!"}'
 
@@ -430,6 +434,8 @@ curl -X POST https://localhost:7xxx/api/auth/login \
 ```
 
 ### 2. Maak een Admin account
+
+Voor de **eerste** admin gebruik je database of code seeding. Het register endpoint is admin-only en bedoeld voor extra admins.
 
 **Optie 1: Via database** (eerste keer)
 Voer rechtstreeks in de database uit:
