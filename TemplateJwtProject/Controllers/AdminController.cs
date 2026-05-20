@@ -35,9 +35,10 @@ public class AdminController : ControllerBase
             return NotFound(new { message = "User not found" });
         }
 
-        if (model.Role != Roles.Admin && model.Role != Roles.User)
+        // Valideer of de rol bestaat
+        if (model.Role != Roles.Admin)
         {
-            return BadRequest(new { message = $"Invalid role. Valid roles are: {Roles.Admin}, {Roles.User}" });
+            return BadRequest(new { message = $"Invalid role. Valid role is: {Roles.Admin}" });
         }
 
         if (await _userManager.IsInRoleAsync(user, model.Role))
@@ -113,6 +114,11 @@ public class AdminController : ControllerBase
             return NotFound(new { message = "User not found" });
         }
 
+        if (model.Role != Roles.Admin)
+        {
+            return BadRequest(new { message = $"Invalid role. Valid role is: {Roles.Admin}" });
+        }
+
         if (!await _userManager.IsInRoleAsync(user, model.Role))
         {
             return BadRequest(new { message = $"User does not have the {model.Role} role" });
@@ -136,5 +142,26 @@ public class AdminController : ControllerBase
             roles = roles
         });
     }
-    
+
+    [HttpGet("admins")]
+    public async Task<IActionResult> GetAllAdmins()
+    {
+        var admins = await _userManager.GetUsersInRoleAsync(Roles.Admin);
+
+        var adminList = new List<object>();
+
+        foreach (var admin in admins)
+        {
+            var roles = await _userManager.GetRolesAsync(admin);
+            adminList.Add(new
+            {
+                id = admin.Id,
+                email = admin.Email,
+                userName = admin.UserName,
+                roles = roles
+            });
+        }
+
+        return Ok(adminList);
+    }
 }

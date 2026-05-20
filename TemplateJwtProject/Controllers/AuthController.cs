@@ -34,7 +34,53 @@ public class AuthController : ControllerBase
         _refreshTokenService = refreshTokenService;
         _logger = logger;
     }
-    
+
+    [HttpPost("register")]
+    [Authorize(Roles = Roles.Admin)]
+    public async Task<IActionResult> Register([FromBody] RegisterDto model)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        var user = new ApplicationUser
+        {
+            UserName = model.Email,
+            Email = model.Email
+        };
+
+        var result = await _userManager.CreateAsync(user, model.Password);
+
+        if (!result.Succeeded)
+        {
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+            return BadRequest(ModelState);
+        }
+
+        // Wijs standaard de "Admin" rol toe
+        await _userManager.AddToRoleAsync(user, Roles.Admin);
+
+        _logger.LogInformation(
+            "User {Email} created successfully with role {Role}",
+            SanitizeForLog(model.Email),
+            Roles.Admin);
+
+        var token = await _jwtService.GenerateTokenAsync(user);
+        var refreshToken = await _refreshTokenService.GenerateRefreshTokenAsync(user.Id);
+        var roles = await _userManager.GetRolesAsync(user);
+        
+        return Ok(new AuthResponseDto
+        {
+            Token = token,
+            RefreshToken = refreshToken.Token,
+            Email = user.Email ?? string.Empty,
+            Roles = roles.ToList(),
+            ExpiresAt = DateTime.UtcNow.AddMinutes(60)
+        });
+    }
+
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginDto model)
     {
@@ -58,7 +104,10 @@ public class AuthController : ControllerBase
         var refreshToken = await _refreshTokenService.GenerateRefreshTokenAsync(user.Id);
         var roles = await _userManager.GetRolesAsync(user);
 
-        _logger.LogInformation("User {Email} logged in successfully with roles: {Roles}", model.Email, string.Join(", ", roles));
+        _logger.LogInformation(
+            "User {Email} logged in successfully with roles: {Roles}",
+            SanitizeForLog(model.Email),
+            string.Join(", ", roles));
 
         return Ok(new AuthResponseDto
         {
@@ -96,7 +145,7 @@ public class AuthController : ControllerBase
         var newRefreshToken = await _refreshTokenService.GenerateRefreshTokenAsync(user.Id);
         var roles = await _userManager.GetRolesAsync(user);
 
-        _logger.LogInformation("Refresh token used for user {Email}", user.Email);
+        _logger.LogInformation("Refresh token used for user {Email}", SanitizeForLog(user.Email));
 
         return Ok(new AuthResponseDto
         {
@@ -135,8 +184,13 @@ public class AuthController : ControllerBase
 
         await _refreshTokenService.RevokeAllUserRefreshTokensAsync(userId);
 
-        _logger.LogInformation("User {UserId} logged out from all devices", userId);
+        _logger.LogInformation("User {UserId} logged out from all devices", SanitizeForLog(userId));
 
         return Ok(new { message = "Logged out from all devices successfully" });
+    }
+
+    private static string SanitizeForLog(string? value)
+    {
+        return value?.Replace("\r", string.Empty).Replace("\n", string.Empty) ?? string.Empty;
     }
 }

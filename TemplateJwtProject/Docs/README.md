@@ -9,11 +9,11 @@ Dit project implementeert een complete ASP.NET Core Web API met Identity, JWT au
 - ✅ ASP.NET Core Identity met `ApplicationUser` (erft van `IdentityUser`)
 - ✅ JWT Bearer Token authenticatie
 - ✅ **Refresh Tokens voor automatische token renewal**
-- ✅ **Role-based Authorization (User & Admin rollen)**
+- ✅ **Role-based Authorization (Admin rol)**
 - ✅ **CORS configuratie voor frontend integratie**
 - ✅ SQL Server database met Entity Framework Core
-- ✅ Register & Login endpoints met automatische rol-toewijzing
-- ✅ Admin endpoints voor gebruikersbeheer
+- ✅ Login endpoint voor admins en admin-only registratie
+- ✅ Admin endpoints voor beheer van admin-accounts
 - ✅ Beveiligde endpoints met `[Authorize]` attribuut
 - ✅ Token revocation & logout from all devices
 - ✅ **ASP.NET Core Identity metrics (nieuw in .NET 10)**
@@ -22,7 +22,7 @@ Dit project implementeert een complete ASP.NET Core Web API met Identity, JWT au
 
 ### ASP.NET Core Identity Metrics
 .NET 10 introduceert nieuwe observability features voor Identity met metrics voor:
-- User management: Creaties, updates, deletes
+- Account management: Creaties, updates, deletes
 - Authentication: Login attempts, sign ins/outs, two-factor
 - Password management: Password checks en token verificaties
 
@@ -37,20 +37,21 @@ Nieuwe metrics voor authentication events:
 
 ## Rollen
 
-Het systeem heeft twee standaard rollen:
+Het systeem heeft één standaard rol:
 
-- **User** - Standaard rol toegewezen bij registratie
-- **Admin** - Beheerdersrol voor gebruikersbeheer
+- **Admin** - Beheerdersrol voor toegang tot beveiligde endpoints
+
+Bezoekers gebruiken de website zonder account; alleen admins hebben een account.
 
 Rollen worden automatisch aangemaakt bij het opstarten van de applicatie via `RoleInitializer`.
 
 ## Database Tabellen
 
 Na het runnen van de migraties zijn de volgende Identity tabellen aangemaakt:
-- `AspNetUsers` - gebruikersgegevens
-- `AspNetRoles` - rollen (Admin, User)
-- `AspNetUserRoles` - koppeling tussen users en roles
-- `AspNetUserClaims` - user claims
+- `AspNetUsers` - accountgegevens
+- `AspNetRoles` - rollen (Admin)
+- `AspNetUserRoles` - koppeling tussen accounts en roles
+- `AspNetUserClaims` - account claims
 - `AspNetUserLogins` - externe login providers
 - `AspNetUserTokens` - tokens voor password reset, etc.
 - `AspNetRoleClaims` - role claims
@@ -60,7 +61,7 @@ Na het runnen van de migraties zijn de volgende Identity tabellen aangemaakt:
 
 ### URL
 De API draait default op https://localhost:7003
-dus wanneer je een post naar de register endpoint wilt maken om een gebruiker te registeren zou je dat in de 
+dus wanneer je een post naar de admin-only register endpoint wilt maken om een admin te registeren zou je dat in de 
 development omgeving kunnen doen naar:  https://localhost:7003/api/auth/register
 
 
@@ -74,7 +75,7 @@ development omgeving kunnen doen naar:  https://localhost:7003/api/auth/register
   "JwtSettings": {
     "SecretKey": "YourSuperSecretKeyThatIsAtLeast32CharactersLong!123456",
     "Issuer": "TemplateJwtProject",
-    "Audience": "TemplateJwtProjectUsers",
+    "Audience": "TemplateJwtProjectAdmins",
     "ExpiryInMinutes": "60",
     "RefreshTokenExpiryInDays": "7"
   },
@@ -91,7 +92,7 @@ development omgeving kunnen doen naar:  https://localhost:7003/api/auth/register
 - Verander de `SecretKey` in productie naar een veilige, random gegenereerde key!
 - Pas `AllowedOrigins` aan voor je productie frontend URL's
 - **Access Token**: 60 minuten (kort voor beveiliging)
-- **Refresh Token**: 7 dagen (lang voor gebruikerservaring)
+- **Refresh Token**: 7 dagen (lang voor admin-ervaring)
 
 ### CORS Configuratie
 
@@ -127,7 +128,7 @@ Voeg extra origins toe in `appsettings.json`:
 
 ### Wat zijn Refresh Tokens?
 
-Refresh tokens stellen gebruikers in staat om ingelogd te blijven zonder constant hun wachtwoord opnieuw in te voeren. Wanneer de JWT access token (60 min) verloopt, kan de frontend automatisch een nieuwe aanvragen met de refresh token (7 dagen).
+Refresh tokens stellen admins in staat om ingelogd te blijven zonder constant hun wachtwoord opnieuw in te voeren. Wanneer de JWT access token (60 min) verloopt, kan de frontend automatisch een nieuwe aanvragen met de refresh token (7 dagen).
 
 **Zie [REFRESH_TOKENS.md](REFRESH_TOKENS.md) voor gedetailleerde documentatie en frontend implementatie voorbeelden.**
 
@@ -148,8 +149,8 @@ Content-Type: application/json
 {
   "token": "eyJhbG...",
   "refreshToken": "p7K2m5N8vRxWqZt...",
-  "email": "user@example.com",
-  "roles": ["User"],
+  "email": "admin@example.com",
+  "roles": ["Admin"],
   "expiresAt": "2024-01-17T14:37:08Z"
 }
 ```
@@ -184,7 +185,7 @@ const response = await fetch('https://localhost:7xxx/api/auth/login', {
   },
   credentials: 'include',
   body: JSON.stringify({
-    email: 'user@example.com',
+    email: 'admin@example.com',
     password: 'Test123!'
   })
 });
@@ -285,15 +286,16 @@ export default api;
 
 ## API Endpoints
 
-### Auth Controller (Publiek)
+### Auth Controller
 
-#### 1. Register - Nieuwe gebruiker aanmaken
+#### 1. Register - Nieuwe admin aanmaken (Admin-only)
 ```http
 POST /api/auth/register
+Authorization: Bearer {admin-token}
 Content-Type: application/json
 
 {
-  "email": "user@example.com",
+  "email": "admin@example.com",
   "password": "Test123!",
   "confirmPassword": "Test123!"
 }
@@ -304,21 +306,21 @@ Content-Type: application/json
 {
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "refreshToken": "kYj3L8Xm9QwErTy...",
-  "email": "user@example.com",
-  "roles": ["User"],
+  "email": "admin@example.com",
+  "roles": ["Admin"],
   "expiresAt": "2024-01-17T13:37:08Z"
 }
 ```
 
-**Note:** Nieuwe gebruikers krijgen automatisch de "User" rol toegewezen.
+**Note:** Alleen bestaande admins kunnen nieuwe admins aanmaken.
 
-#### 2. Login - Inloggen met bestaande gebruiker
+#### 2. Login - Inloggen met bestaande admin
 ```http
 POST /api/auth/login
 Content-Type: application/json
 
 {
-  "email": "user@example.com",
+  "email": "admin@example.com",
   "password": "Test123!"
 }
 ```
@@ -328,51 +330,30 @@ Content-Type: application/json
 {
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "refreshToken": "kYj3L8Xm9QwErTy...",
-  "email": "user@example.com",
-  "roles": ["User"],
+  "email": "admin@example.com",
+  "roles": ["Admin"],
   "expiresAt": "2024-01-17T13:37:08Z"
 }
 ```
 
 ### Test Controller (Beveiligd met Rollen)
 
-#### 3. User Endpoint - Toegankelijk voor User rol
-```http
-GET /api/test/user
-Authorization: Bearer {token}
-```
-
-#### 4. Admin Endpoint - Alleen toegankelijk voor Admin rol
+#### 3. Admin Endpoint - Alleen toegankelijk voor Admin rol
 ```http
 GET /api/test/admin
 Authorization: Bearer {token}
 ```
 
-#### 5. User or Admin Endpoint - Toegankelijk voor beide rollen
-```http
-GET /api/test/user-or-admin
-Authorization: Bearer {token}
-```
-
-**Response:**
-```json
-{
-  "message": "This endpoint is accessible by Users or Admins",
-  "user": "user@example.com",
-  "roles": ["User"]
-}
-```
-
 ### Admin Controller (Alleen Admin toegang)
 
-#### 6. Assign Role - Wijs een rol toe aan een gebruiker
+#### 4. Assign Role - Wijs Admin rol toe aan een account
 ```http
 POST /api/admin/assign-role
 Authorization: Bearer {admin-token}
 Content-Type: application/json
 
 {
-  "email": "user@example.com",
+  "email": "admin@example.com",
   "role": "Admin"
 }
 ```
@@ -381,26 +362,26 @@ Content-Type: application/json
 ```json
 {
   "message": "Role Admin assigned successfully",
-  "email": "user@example.com",
-  "roles": ["User", "Admin"]
+  "email": "admin@example.com",
+  "roles": ["Admin"]
 }
 ```
 
-#### 7. Remove Role - Verwijder een rol van een gebruiker
+#### 5. Remove Role - Verwijder Admin rol van een account
 ```http
 POST /api/admin/remove-role
 Authorization: Bearer {admin-token}
 Content-Type: application/json
 
 {
-  "email": "user@example.com",
+  "email": "admin@example.com",
   "role": "Admin"
 }
 ```
 
-#### 8. Get All Users - Lijst van alle gebruikers met rollen
+#### 6. Get All Admins - Lijst van alle admins met rollen
 ```http
-GET /api/admin/users
+GET /api/admin/admins
 Authorization: Bearer {admin-token}
 ```
 
@@ -409,22 +390,16 @@ Authorization: Bearer {admin-token}
 [
   {
     "id": "123-456-789",
-    "email": "user@example.com",
-    "userName": "user@example.com",
-    "roles": ["User"]
-  },
-  {
-    "id": "987-654-321",
     "email": "admin@example.com",
     "userName": "admin@example.com",
-    "roles": ["User", "Admin"]
+    "roles": ["Admin"]
   }
 ]
 ```
 
 ### Weather Forecast (Beveiligd)
 
-#### 9. Get Weather - Beveiligd endpoint (JWT vereist)
+#### 7. Get Weather - Beveiligd endpoint (JWT vereist)
 ```http
 GET /weatherforecast
 Authorization: Bearer {token}
@@ -444,10 +419,11 @@ Authorization: Bearer {token}
 
 ## Gebruik met Postman/curl
 
-### 1. Register en Login
+### 1. Admin aanmaken (Admin-only) en Login
 ```bash
-# Register (krijgt automatisch User rol + refresh token)
+# Register (admin-only, krijgt automatisch Admin rol + refresh token)
 curl -X POST https://localhost:7xxx/api/auth/register \
+  -H "Authorization: Bearer YOUR_ADMIN_JWT_TOKEN_HERE" \
   -H "Content-Type: application/json" \
   -d '{"email":"test@test.com","password":"Test123!","confirmPassword":"Test123!"}'
 
@@ -457,12 +433,14 @@ curl -X POST https://localhost:7xxx/api/auth/login \
   -d '{"email":"test@test.com","password":"Test123!"}'
 ```
 
-### 2. Maak een Admin gebruiker
+### 2. Maak een Admin account
+
+Voor de **eerste** admin gebruik je database of code seeding. Het register endpoint is admin-only en bedoeld voor extra admins.
 
 **Optie 1: Via database** (eerste keer)
 Voer rechtstreeks in de database uit:
 ```sql
--- Vind de User ID
+-- Vind de Account ID
 SELECT Id FROM AspNetUsers WHERE Email = 'admin@example.com'
 
 -- Vind de Admin Role ID
@@ -475,7 +453,7 @@ VALUES ('user-id-hier', 'admin-role-id-hier')
 
 **Optie 2: Via code** - Voeg dit toe aan `Program.cs` na RoleInitializer:
 ```csharp
-// Maak een admin gebruiker aan (eenmalig)
+// Maak een admin account aan (eenmalig)
 var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
 var adminEmail = "admin@example.com";
 if (await userManager.FindByEmailAsync(adminEmail) == null)
@@ -493,10 +471,6 @@ if (await userManager.FindByEmailAsync(adminEmail) == null)
 
 ### 3. Gebruik beveiligde endpoints
 ```bash
-# Test User endpoint
-curl -X GET https://localhost:7xxx/api/test/user \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE"
-
 # Test Admin endpoint (alleen met Admin rol)
 curl -X GET https://localhost:7xxx/api/test/admin \
   -H "Authorization: Bearer YOUR_ADMIN_JWT_TOKEN_HERE"
@@ -505,11 +479,11 @@ curl -X GET https://localhost:7xxx/api/test/admin \
 ## JWT Token Structuur
 
 De JWT token bevat de volgende claims:
-- `sub` - Email van de gebruiker
+- `sub` - Email van de admin
 - `jti` - Unieke token ID
-- `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier` - User ID
+- `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier` - Account ID
 - `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress` - Email
-- **`http://schemas.microsoft.com/ws/2008/06/identity/claims/role`** - Rollen van de gebruiker
+- **`http://schemas.microsoft.com/ws/2008/06/identity/claims/role`** - Rollen van de admin
 
 Je kunt de token decoderen op [jwt.io](https://jwt.io) om de claims te bekijken.
 
@@ -521,25 +495,12 @@ Je kunt de token decoderen op [jwt.io](https://jwt.io) om de claims te bekijken.
 // Alleen Admin
 [Authorize(Roles = Roles.Admin)]
 public IActionResult AdminOnly() { }
-
-// Alleen User
-[Authorize(Roles = Roles.User)]
-public IActionResult UserOnly() { }
-
-// User OF Admin
-[Authorize(Roles = $"{Roles.User},{Roles.Admin}")]
-public IActionResult UserOrAdmin() { }
-
-// Beide rollen vereist (EN)
-[Authorize(Roles = Roles.User)]
-[Authorize(Roles = Roles.Admin)]
-public IActionResult UserAndAdmin() { }
 ```
 
 ### Rollen in code controleren:
 
 ```csharp
-// Check of gebruiker een specifieke rol heeft
+// Check of admin account een specifieke rol heeft
 if (User.IsInRole(Roles.Admin))
 {
     // Admin-specifieke logica
@@ -663,7 +624,7 @@ TemplateJwtProject/
 
 - **[README.md](README.md)** - Hoofddocumentatie (dit bestand)
 - **[REFRESH_TOKENS.md](REFRESH_TOKENS.md)** - Gedetailleerde refresh token documentatie
-- **[ADMIN_SETUP.md](ADMIN_SETUP.md)** - Guide voor eerste admin gebruiker
+- **[ADMIN_SETUP.md](ADMIN_SETUP.md)** - Guide voor eerste admin account
 
 ## Tips
 
@@ -677,7 +638,7 @@ TemplateJwtProject/
 
 ## Volgende Stappen
 
-- [x] Roles implementeren (Admin, User)
+- [x] Roles implementeren (Admin)
 - [x] Roles in JWT tokens
 - [x] Role-based authorization endpoints
 - [x] Admin management endpoints
@@ -687,5 +648,5 @@ TemplateJwtProject/
 - [ ] Password reset functionaliteit
 - [ ] Rate limiting
 - [ ] Swagger authenticatie configureren
-- [ ] Custom roles (naast User en Admin)
+- [ ] Custom roles (naast Admin)
 - [ ] Claims-based authorization

@@ -9,7 +9,7 @@ public static class RoleInitializer
     {
         var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
-        string[] roleNames = { Roles.Admin, Roles.User };
+        string[] roleNames = { Roles.Admin };
 
         foreach (var roleName in roleNames)
         {
